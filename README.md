@@ -1,6 +1,6 @@
 # Ethereum Fast-Finality Aggregation Experiments
 
-We ran a Dockerized Monte Carlo sensitivity experiment for Ethereum fast-finality aggregation. The experiment compares single-slot finality (SSF) and three-slot finality (3SF) under different network and aggregation topologies. We also added a deterministic Ethereum node-level latency and bandwidth experiment that applies mainnet slot timing, beacon-chain GossipSub parameters, and citable node bandwidth profiles to signature aggregation.
+We ran a Dockerized Monte Carlo sensitivity experiment for Ethereum fast-finality aggregation. The experiment compares single-slot finality (SSF) and three-slot finality (3SF) under different network and aggregation topologies. We also added a deterministic Ethereum node-level latency and bandwidth experiment that applies mainnet slot timing, beacon-chain GossipSub parameters, and citable node bandwidth profiles to signature aggregation. This code has been modified after being forked from the research paper codebase hosted at https://anonymous.4open.science/r/Wonderboom-ethereum and has been used to produce these results.
 
 The key result is:
 
