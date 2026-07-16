@@ -1,0 +1,61 @@
+validators,scenario,profile,bandwidth_mbps,cores,committees_per_slot,committee_size,aggregate_messages,local_aggregation_ms,global_collection_ms,round_ms,ssf_slot_ms,three_sf_slot_ms,three_sf_finality_ms,local_fits_4s_window,ssf_fits_12s,three_sf_fits_12s,source
+128000,ethereum-committee-subnets,ethereum-org-minimum,10,2,32,125,512,3600.000,3600.000,7200.000,14400.000,7200.000,21600.000,true,false,true,ethereum.org minimum node requirement
+128000,global-quorum-collector,ethereum-org-minimum,10,2,1,85333,85333,37706.416,0.000,37706.416,75412.831,37706.416,113119.247,false,false,false,ethereum.org minimum node requirement
+128000,ethereum-committee-subnets,ethereum-org-recommended,25,4,32,125,512,3600.000,3600.000,7200.000,14400.000,7200.000,21600.000,true,false,true,ethereum.org recommended node requirement
+128000,global-quorum-collector,ethereum-org-recommended,25,4,1,85333,85333,18853.208,0.000,18853.208,37706.416,18853.208,56559.623,false,false,false,ethereum.org recommended node requirement
+128000,ethereum-committee-subnets,measured-raspberry-pi,100,4,32,125,512,3600.000,3600.000,7200.000,14400.000,7200.000,21600.000,true,false,true,Cortes-Goicoechea et al. Raspberry Pi profile
+128000,global-quorum-collector,measured-raspberry-pi,100,4,1,85333,85333,18853.208,0.000,18853.208,37706.416,18853.208,56559.623,false,false,false,Cortes-Goicoechea et al. Raspberry Pi profile
+128000,ethereum-committee-subnets,measured-default-node,250,4,32,125,512,3600.000,3600.000,7200.000,14400.000,7200.000,21600.000,true,false,true,Cortes-Goicoechea et al. default node profile
+128000,global-quorum-collector,measured-default-node,250,4,1,85333,85333,18853.208,0.000,18853.208,37706.416,18853.208,56559.623,false,false,false,Cortes-Goicoechea et al. default node profile
+128000,ethereum-committee-subnets,measured-fat-node,10000,32,32,125,512,3600.000,3600.000,7200.000,14400.000,7200.000,21600.000,true,false,true,Cortes-Goicoechea et al. fat node profile
+128000,global-quorum-collector,measured-fat-node,10000,32,1,85333,85333,7200.000,0.000,7200.000,14400.000,7200.000,21600.000,false,false,true,Cortes-Goicoechea et al. fat node profile
+256000,ethereum-committee-subnets,ethereum-org-minimum,10,2,63,127,1008,3600.000,4800.000,8400.000,16800.000,8400.000,25200.000,true,false,true,ethereum.org minimum node requirement
+256000,global-quorum-collector,ethereum-org-minimum,10,2,1,170667,170667,75412.831,0.000,75412.831,150825.662,75412.831,226238.493,false,false,false,ethereum.org minimum node requirement
+256000,ethereum-committee-subnets,ethereum-org-recommended,25,4,63,127,1008,3600.000,4800.000,8400.000,16800.000,8400.000,25200.000,true,false,true,ethereum.org recommended node requirement
+256000,global-quorum-collector,ethereum-org-recommended,25,4,1,170667,170667,37706.416,0.000,37706.416,75412.831,37706.416,113119.247,false,false,false,ethereum.org recommended node requirement
+256000,ethereum-committee-subnets,measured-raspberry-pi,100,4,63,127,1008,3600.000,4800.000,8400.000,16800.000,8400.000,25200.000,true,false,true,Cortes-Goicoechea et al. Raspberry Pi profile
+256000,global-quorum-collector,measured-raspberry-pi,100,4,1,170667,170667,37706.416,0.000,37706.416,75412.831,37706.416,113119.247,false,false,false,Cortes-Goicoechea et al. Raspberry Pi profile
+256000,ethereum-committee-subnets,measured-default-node,250,4,63,127,1008,3600.000,4800.000,8400.000,16800.000,8400.000,25200.000,true,false,true,Cortes-Goicoechea et al. default node profile
+256000,global-quorum-collector,measured-default-node,250,4,1,170667,170667,37706.416,0.000,37706.416,75412.831,37706.416,113119.247,false,false,false,Cortes-Goicoechea et al. default node profile
+256000,ethereum-committee-subnets,measured-fat-node,10000,32,63,127,1008,3600.000,4800.000,8400.000,16800.000,8400.000,25200.000,true,false,true,Cortes-Goicoechea et al. fat node profile
+256000,global-quorum-collector,measured-fat-node,10000,32,1,170667,170667,7200.000,0.000,7200.000,14400.000,7200.000,21600.000,false,false,true,Cortes-Goicoechea et al. fat node profile
+512000,ethereum-committee-subnets,ethereum-org-minimum,10,2,64,250,1024,3600.000,4800.000,8400.000,16800.000,8400.000,25200.000,true,false,true,ethereum.org minimum node requirement
+512000,global-quorum-collector,ethereum-org-minimum,10,2,1,341333,341333,150825.662,0.000,150825.662,301651.324,150825.662,452476.987,false,false,false,ethereum.org minimum node requirement
+512000,ethereum-committee-subnets,ethereum-org-recommended,25,4,64,250,1024,3600.000,4800.000,8400.000,16800.000,8400.000,25200.000,true,false,true,ethereum.org recommended node requirement
+512000,global-quorum-collector,ethereum-org-recommended,25,4,1,341333,341333,75412.831,0.000,75412.831,150825.662,75412.831,226238.493,false,false,false,ethereum.org recommended node requirement
+512000,ethereum-committee-subnets,measured-raspberry-pi,100,4,64,250,1024,3600.000,4800.000,8400.000,16800.000,8400.000,25200.000,true,false,true,Cortes-Goicoechea et al. Raspberry Pi profile
+512000,global-quorum-collector,measured-raspberry-pi,100,4,1,341333,341333,75412.831,0.000,75412.831,150825.662,75412.831,226238.493,false,false,false,Cortes-Goicoechea et al. Raspberry Pi profile
+512000,ethereum-committee-subnets,measured-default-node,250,4,64,250,1024,3600.000,4800.000,8400.000,16800.000,8400.000,25200.000,true,false,true,Cortes-Goicoechea et al. default node profile
+512000,global-quorum-collector,measured-default-node,250,4,1,341333,341333,75412.831,0.000,75412.831,150825.662,75412.831,226238.493,false,false,false,Cortes-Goicoechea et al. default node profile
+512000,ethereum-committee-subnets,measured-fat-node,10000,32,64,250,1024,3600.000,4800.000,8400.000,16800.000,8400.000,25200.000,true,false,true,Cortes-Goicoechea et al. fat node profile
+512000,global-quorum-collector,measured-fat-node,10000,32,1,341333,341333,9426.604,0.000,9426.604,18853.208,9426.604,28279.812,false,false,true,Cortes-Goicoechea et al. fat node profile
+1000000,ethereum-committee-subnets,ethereum-org-minimum,10,2,64,489,1024,3600.000,4800.000,8400.000,16800.000,8400.000,25200.000,true,false,true,ethereum.org minimum node requirement
+1000000,global-quorum-collector,ethereum-org-minimum,10,2,1,666667,666667,294581.372,0.000,294581.372,589162.743,294581.372,883744.115,false,false,false,ethereum.org minimum node requirement
+1000000,ethereum-committee-subnets,ethereum-org-recommended,25,4,64,489,1024,3600.000,4800.000,8400.000,16800.000,8400.000,25200.000,true,false,true,ethereum.org recommended node requirement
+1000000,global-quorum-collector,ethereum-org-recommended,25,4,1,666667,666667,147290.686,0.000,147290.686,294581.372,147290.686,441872.057,false,false,false,ethereum.org recommended node requirement
+1000000,ethereum-committee-subnets,measured-raspberry-pi,100,4,64,489,1024,3600.000,4800.000,8400.000,16800.000,8400.000,25200.000,true,false,true,Cortes-Goicoechea et al. Raspberry Pi profile
+1000000,global-quorum-collector,measured-raspberry-pi,100,4,1,666667,666667,147290.686,0.000,147290.686,294581.372,147290.686,441872.057,false,false,false,Cortes-Goicoechea et al. Raspberry Pi profile
+1000000,ethereum-committee-subnets,measured-default-node,250,4,64,489,1024,3600.000,4800.000,8400.000,16800.000,8400.000,25200.000,true,false,true,Cortes-Goicoechea et al. default node profile
+1000000,global-quorum-collector,measured-default-node,250,4,1,666667,666667,147290.686,0.000,147290.686,294581.372,147290.686,441872.057,false,false,false,Cortes-Goicoechea et al. default node profile
+1000000,ethereum-committee-subnets,measured-fat-node,10000,32,64,489,1024,3600.000,4800.000,8400.000,16800.000,8400.000,25200.000,true,false,true,Cortes-Goicoechea et al. fat node profile
+1000000,global-quorum-collector,measured-fat-node,10000,32,1,666667,666667,18411.336,0.000,18411.336,36822.671,18411.336,55234.007,false,false,false,Cortes-Goicoechea et al. fat node profile
+2097152,ethereum-committee-subnets,ethereum-org-minimum,10,2,64,1024,1024,4800.000,4800.000,9600.000,19200.000,9600.000,28800.000,false,false,true,ethereum.org minimum node requirement
+2097152,global-quorum-collector,ethereum-org-minimum,10,2,1,1398101,1398101,617781.912,0.000,617781.912,1235563.825,617781.912,1853345.737,false,false,false,ethereum.org minimum node requirement
+2097152,ethereum-committee-subnets,ethereum-org-recommended,25,4,64,1024,1024,4800.000,4800.000,9600.000,19200.000,9600.000,28800.000,false,false,true,ethereum.org recommended node requirement
+2097152,global-quorum-collector,ethereum-org-recommended,25,4,1,1398101,1398101,308890.956,0.000,308890.956,617781.912,308890.956,926672.869,false,false,false,ethereum.org recommended node requirement
+2097152,ethereum-committee-subnets,measured-raspberry-pi,100,4,64,1024,1024,4800.000,4800.000,9600.000,19200.000,9600.000,28800.000,false,false,true,Cortes-Goicoechea et al. Raspberry Pi profile
+2097152,global-quorum-collector,measured-raspberry-pi,100,4,1,1398101,1398101,308890.956,0.000,308890.956,617781.912,308890.956,926672.869,false,false,false,Cortes-Goicoechea et al. Raspberry Pi profile
+2097152,ethereum-committee-subnets,measured-default-node,250,4,64,1024,1024,4800.000,4800.000,9600.000,19200.000,9600.000,28800.000,false,false,true,Cortes-Goicoechea et al. default node profile
+2097152,global-quorum-collector,measured-default-node,250,4,1,1398101,1398101,308890.956,0.000,308890.956,617781.912,308890.956,926672.869,false,false,false,Cortes-Goicoechea et al. default node profile
+2097152,ethereum-committee-subnets,measured-fat-node,10000,32,64,1024,1024,4800.000,4800.000,9600.000,19200.000,9600.000,28800.000,false,false,true,Cortes-Goicoechea et al. fat node profile
+2097152,global-quorum-collector,measured-fat-node,10000,32,1,1398101,1398101,38611.370,0.000,38611.370,77222.739,38611.370,115834.109,false,false,false,Cortes-Goicoechea et al. fat node profile
+2500000,ethereum-committee-subnets,ethereum-org-minimum,10,2,64,1221,1024,4800.000,4800.000,9600.000,19200.000,9600.000,28800.000,false,false,true,ethereum.org minimum node requirement
+2500000,global-quorum-collector,ethereum-org-minimum,10,2,1,1666667,1666667,736453.429,0.000,736453.429,1472906.858,736453.429,2209360.286,false,false,false,ethereum.org minimum node requirement
+2500000,ethereum-committee-subnets,ethereum-org-recommended,25,4,64,1221,1024,4800.000,4800.000,9600.000,19200.000,9600.000,28800.000,false,false,true,ethereum.org recommended node requirement
+2500000,global-quorum-collector,ethereum-org-recommended,25,4,1,1666667,1666667,368226.714,0.000,368226.714,736453.429,368226.714,1104680.143,false,false,false,ethereum.org recommended node requirement
+2500000,ethereum-committee-subnets,measured-raspberry-pi,100,4,64,1221,1024,4800.000,4800.000,9600.000,19200.000,9600.000,28800.000,false,false,true,Cortes-Goicoechea et al. Raspberry Pi profile
+2500000,global-quorum-collector,measured-raspberry-pi,100,4,1,1666667,1666667,368226.714,0.000,368226.714,736453.429,368226.714,1104680.143,false,false,false,Cortes-Goicoechea et al. Raspberry Pi profile
+2500000,ethereum-committee-subnets,measured-default-node,250,4,64,1221,1024,4800.000,4800.000,9600.000,19200.000,9600.000,28800.000,false,false,true,Cortes-Goicoechea et al. default node profile
+2500000,global-quorum-collector,measured-default-node,250,4,1,1666667,1666667,368226.714,0.000,368226.714,736453.429,368226.714,1104680.143,false,false,false,Cortes-Goicoechea et al. default node profile
+2500000,ethereum-committee-subnets,measured-fat-node,10000,32,64,1221,1024,4800.000,4800.000,9600.000,19200.000,9600.000,28800.000,false,false,true,Cortes-Goicoechea et al. fat node profile
+2500000,global-quorum-collector,measured-fat-node,10000,32,1,1666667,1666667,46028.339,0.000,46028.339,92056.679,46028.339,138085.018,false,false,false,Cortes-Goicoechea et al. fat node profile
