@@ -31,6 +31,10 @@ struct SampledParams {
 #[derive(Debug, Clone)]
 struct TrialResult {
     topology: &'static str,
+    avg_degree: Option<f64>,
+    diameter_hops: Option<f64>,
+    broadcast_ms: f64,
+    signature_aggregation_ms: f64,
     round_ms: f64,
 }
 
@@ -38,6 +42,10 @@ struct TrialResult {
 struct Summary {
     validators: usize,
     topology: &'static str,
+    p50_avg_degree: Option<f64>,
+    p50_diameter_hops: Option<f64>,
+    p50_broadcast_ms: f64,
+    p50_signature_aggregation_ms: f64,
     p50_round_ms: f64,
     p90_round_ms: f64,
     p99_round_ms: f64,
@@ -58,7 +66,7 @@ fn main() {
 
 fn parse_args() -> Options {
     let mut opts = Options {
-        validators: vec![128_000, 256_000, 512_000, 1_000_000, 2_097_152, 2_500_000],
+        validators: vec![10, 100, 1_000, 10_000, 100_000, 1_000_000],
         trials: 2_000,
         seed: 42,
         csv: false,
@@ -98,7 +106,7 @@ fn parse_args() -> Options {
 }
 
 fn print_help() {
-    println!("Usage: compare_topologies [--csv] [--validators 128000,512000,1000000] [--trials 2000] [--seed 42]");
+    println!("Usage: compare_topologies [--csv] [--validators 10,100,1000,10000,100000,1000000] [--trials 2000] [--seed 42]");
     println!("Runs a Monte Carlo sensitivity model for standalone SSF and 3SF aggregation timing.");
     println!("Each topology round is max(evidence lower bound, propagation cost, topology-specific collection/crypto cost).");
     println!("SSF fits if 2 * round_ms <= 12000. 3SF slot fits if round_ms <= 12000.");
@@ -124,21 +132,51 @@ fn run_monte_carlo(opts: &Options) -> Vec<Summary> {
                     .iter_mut()
                     .find(|(name, _)| *name == result.topology)
                 {
-                    values.push(result.round_ms);
+                    values.push(result);
                 }
             }
         }
 
-        for (topology, mut values) in per_topology {
-            values.sort_by(|a, b| a.partial_cmp(b).unwrap());
+        for (topology, values) in per_topology {
+            let mut degrees = values
+                .iter()
+                .filter_map(|value| value.avg_degree)
+                .collect::<Vec<_>>();
+            let mut diameters = values
+                .iter()
+                .filter_map(|value| value.diameter_hops)
+                .collect::<Vec<_>>();
+            let mut broadcasts = values
+                .iter()
+                .map(|value| value.broadcast_ms)
+                .collect::<Vec<_>>();
+            let mut aggregations = values
+                .iter()
+                .map(|value| value.signature_aggregation_ms)
+                .collect::<Vec<_>>();
+            let mut rounds = values
+                .iter()
+                .map(|value| value.round_ms)
+                .collect::<Vec<_>>();
+
+            sort_f64(&mut degrees);
+            sort_f64(&mut diameters);
+            sort_f64(&mut broadcasts);
+            sort_f64(&mut aggregations);
+            sort_f64(&mut rounds);
+
             summaries.push(Summary {
                 validators,
                 topology,
-                p50_round_ms: percentile(&values, 0.50),
-                p90_round_ms: percentile(&values, 0.90),
-                p99_round_ms: percentile(&values, 0.99),
-                ssf_fit_pct: fit_pct(&values, 2.0),
-                three_sf_fit_pct: fit_pct(&values, 1.0),
+                p50_avg_degree: optional_percentile(&degrees, 0.50),
+                p50_diameter_hops: optional_percentile(&diameters, 0.50),
+                p50_broadcast_ms: percentile(&broadcasts, 0.50),
+                p50_signature_aggregation_ms: percentile(&aggregations, 0.50),
+                p50_round_ms: percentile(&rounds, 0.50),
+                p90_round_ms: percentile(&rounds, 0.90),
+                p99_round_ms: percentile(&rounds, 0.99),
+                ssf_fit_pct: fit_pct(&rounds, 2.0),
+                three_sf_fit_pct: fit_pct(&rounds, 1.0),
             });
         }
     }
@@ -172,32 +210,29 @@ fn sample_params(rng: &mut StdRng) -> SampledParams {
 
 fn evaluate_trial(validators: usize, params: &SampledParams) -> Vec<TrialResult> {
     let evidence_floor = evidence_floor_ms(validators, params);
+    let conservative = gossipsub_metrics(validators, params, 6.0, 10.0, 3.0, 5.0);
+    let optimized = gossipsub_metrics(validators, params, 12.0, 20.0, 6.0, 12.0);
 
     vec![
         TrialResult {
             topology: "evidence-lower-bound",
+            avg_degree: None,
+            diameter_hops: None,
+            broadcast_ms: evidence_floor,
+            signature_aggregation_ms: 0.0,
             round_ms: evidence_floor,
         },
         TrialResult {
             topology: "gossipsub-conservative",
-            round_ms: gossipsub_round_ms(validators, params, 6.0, 10.0, 3.0, 5.0),
+            ..conservative
         },
         TrialResult {
             topology: "gossipsub-optimized",
-            round_ms: gossipsub_round_ms(validators, params, 12.0, 20.0, 6.0, 12.0),
+            ..optimized
         },
-        TrialResult {
-            topology: "committee-hierarchical",
-            round_ms: committee_hierarchical_round_ms(validators, params),
-        },
-        TrialResult {
-            topology: "central-collector",
-            round_ms: central_collector_round_ms(validators, params),
-        },
-        TrialResult {
-            topology: "sequential-chain",
-            round_ms: sequential_chain_round_ms(validators, params),
-        },
+        committee_hierarchical_metrics(validators, params),
+        central_collector_metrics(validators, params),
+        sequential_chain_metrics(validators, params),
     ]
 }
 
@@ -209,42 +244,58 @@ fn evidence_floor_ms(validators: usize, params: &SampledParams) -> f64 {
     )
 }
 
-fn gossipsub_round_ms(
+fn gossipsub_metrics(
     validators: usize,
     params: &SampledParams,
     degree_min: f64,
     degree_max: f64,
     parallel_min: f64,
     parallel_max: f64,
-) -> f64 {
+) -> TrialResult {
     let mut rng = StdRng::seed_from_u64(
         validators as u64
             ^ params.bandwidth_mbps.to_bits()
             ^ params.hop_ms.to_bits()
             ^ degree_min.to_bits(),
     );
-    let degree = rng.gen_range(degree_min..=degree_max);
-    let parallelism = rng.gen_range(parallel_min..=parallel_max);
+    let max_degree = validators.saturating_sub(1).max(1) as f64;
+    let degree = rng.gen_range(degree_min..=degree_max).min(max_degree);
+    let parallelism = rng.gen_range(parallel_min..=parallel_max).min(max_degree);
     let fanout = degree.min(parallelism).max(2.0);
     let quorum_validators = (validators as f64 * params.quorum).max(2.0);
-    let hops = quorum_validators.log(fanout).ceil();
+    let dissemination_hops = quorum_validators.log(fanout).ceil().max(1.0);
 
     let evidence_floor = evidence_floor_ms(validators, params);
-    let propagation = hops * params.hop_ms * params.duplicate_factor;
+    let broadcast = dissemination_hops * params.hop_ms * params.duplicate_factor;
     let distributed_crypto = aggregate_crypto_ms(quorum_validators, params) / fanout;
+    let round_ms = evidence_floor.max(broadcast).max(distributed_crypto);
 
-    evidence_floor.max(propagation).max(distributed_crypto)
+    TrialResult {
+        topology: "",
+        avg_degree: Some(degree),
+        diameter_hops: Some(random_mesh_diameter(validators, degree)),
+        broadcast_ms: broadcast,
+        signature_aggregation_ms: distributed_crypto,
+        round_ms,
+    }
 }
 
-fn committee_hierarchical_round_ms(validators: usize, params: &SampledParams) -> f64 {
+fn committee_hierarchical_metrics(validators: usize, params: &SampledParams) -> TrialResult {
     let mut rng = StdRng::seed_from_u64(
         validators as u64 ^ params.raw_vote_bytes.to_bits() ^ params.crypto_multiplier.to_bits(),
     );
-    let committee_size: f64 = rng.gen_range(256.0..=2048.0);
-    let fanout: f64 = rng.gen_range(16.0..=64.0);
+    let committee_size: f64 = rng.gen_range(256.0_f64..=2048.0_f64).min(validators as f64);
+    let fanout: f64 = rng.gen_range(16.0_f64..=64.0_f64);
     let quorum_validators = validators as f64 * params.quorum;
     let committees = (quorum_validators / committee_size).ceil().max(1.0);
-    let levels = committees.log(fanout).ceil().max(1.0);
+    let levels = if committees <= 1.0 {
+        1.0
+    } else {
+        committees
+            .log(fanout.min(committees).max(2.0))
+            .ceil()
+            .max(1.0)
+    };
 
     let evidence_floor = evidence_floor_ms(validators, params);
     let local_receive = bits_to_ms(
@@ -252,14 +303,30 @@ fn committee_hierarchical_round_ms(validators: usize, params: &SampledParams) ->
         params.bandwidth_mbps,
     );
     let local_crypto = aggregate_crypto_ms(committee_size, params) / params.cores;
-    let propagation = levels * params.hop_ms * params.duplicate_factor;
+    let signature_aggregation_ms = local_receive + local_crypto;
+    let broadcast_ms = levels * params.hop_ms * params.duplicate_factor;
+    let graph_nodes = validators as f64 + committees;
+    let avg_degree = tree_average_degree(graph_nodes);
+    let diameter_hops = if committees <= 1.0 {
+        2.0
+    } else {
+        2.0 + 2.0 * levels
+    };
+    let round_ms = evidence_floor
+        .max(signature_aggregation_ms)
+        .max(broadcast_ms);
 
-    evidence_floor
-        .max(local_receive + local_crypto)
-        .max(propagation)
+    TrialResult {
+        topology: "committee-hierarchical",
+        avg_degree: Some(avg_degree),
+        diameter_hops: Some(diameter_hops),
+        broadcast_ms,
+        signature_aggregation_ms,
+        round_ms,
+    }
 }
 
-fn central_collector_round_ms(validators: usize, params: &SampledParams) -> f64 {
+fn central_collector_metrics(validators: usize, params: &SampledParams) -> TrialResult {
     let quorum_validators = validators as f64 * params.quorum;
     let evidence_floor = evidence_floor_ms(validators, params);
     let raw_receive = bits_to_ms(
@@ -267,14 +334,57 @@ fn central_collector_round_ms(validators: usize, params: &SampledParams) -> f64 
         params.bandwidth_mbps,
     );
     let crypto = aggregate_crypto_ms(quorum_validators, params) / params.cores;
+    let signature_aggregation_ms = raw_receive + crypto;
+    let broadcast_ms = params.hop_ms;
+    let round_ms = evidence_floor.max(signature_aggregation_ms + broadcast_ms);
 
-    evidence_floor.max(raw_receive + crypto + params.hop_ms)
+    TrialResult {
+        topology: "central-collector",
+        avg_degree: Some(tree_average_degree(validators as f64)),
+        diameter_hops: Some(if validators <= 2 { 1.0 } else { 2.0 }),
+        broadcast_ms,
+        signature_aggregation_ms,
+        round_ms,
+    }
 }
 
-fn sequential_chain_round_ms(validators: usize, params: &SampledParams) -> f64 {
+fn sequential_chain_metrics(validators: usize, params: &SampledParams) -> TrialResult {
     let quorum_validators = validators as f64 * params.quorum;
     let evidence_floor = evidence_floor_ms(validators, params);
-    evidence_floor.max(quorum_validators * params.hop_ms)
+    let broadcast_ms = quorum_validators * params.hop_ms;
+    let signature_aggregation_ms = aggregate_crypto_ms(quorum_validators, params);
+    let round_ms = evidence_floor
+        .max(broadcast_ms)
+        .max(signature_aggregation_ms);
+
+    TrialResult {
+        topology: "sequential-chain",
+        avg_degree: Some(tree_average_degree(validators as f64)),
+        diameter_hops: Some(validators.saturating_sub(1) as f64),
+        broadcast_ms,
+        signature_aggregation_ms,
+        round_ms,
+    }
+}
+
+fn random_mesh_diameter(validators: usize, degree: f64) -> f64 {
+    if validators <= 1 {
+        return 0.0;
+    }
+    if degree >= validators.saturating_sub(1) as f64 {
+        return 1.0;
+    }
+
+    let branching = (degree - 1.0).max(2.0);
+    (validators as f64).log(branching).ceil().max(1.0)
+}
+
+fn tree_average_degree(nodes: f64) -> f64 {
+    if nodes <= 1.0 {
+        0.0
+    } else {
+        2.0 * (nodes - 1.0) / nodes
+    }
 }
 
 fn aggregate_crypto_ms(items: f64, params: &SampledParams) -> f64 {
@@ -294,6 +404,14 @@ fn percentile(sorted: &[f64], p: f64) -> f64 {
     sorted[idx.min(sorted.len() - 1)]
 }
 
+fn optional_percentile(sorted: &[f64], p: f64) -> Option<f64> {
+    (!sorted.is_empty()).then(|| percentile(sorted, p))
+}
+
+fn sort_f64(values: &mut [f64]) {
+    values.sort_by(|a, b| a.partial_cmp(b).unwrap());
+}
+
 fn fit_pct(sorted: &[f64], protocol_rounds: f64) -> f64 {
     if sorted.is_empty() {
         return 0.0;
@@ -308,12 +426,16 @@ fn fit_pct(sorted: &[f64], protocol_rounds: f64) -> f64 {
 }
 
 fn print_csv(summaries: &[Summary]) {
-    println!("validators,topology,p50_round_ms,p90_round_ms,p99_round_ms,ssf_p50_slot_ms,three_sf_p50_slot_ms,three_sf_p50_finality_ms,ssf_fit_12s_pct,three_sf_fit_12s_pct");
+    println!("validators,topology,p50_avg_degree,p50_diameter_hops,p50_broadcast_ms,p50_signature_aggregation_ms,p50_round_ms,p90_round_ms,p99_round_ms,ssf_p50_slot_ms,three_sf_p50_slot_ms,three_sf_p50_finality_ms,ssf_fit_12s_pct,three_sf_fit_12s_pct");
     for row in summaries {
         println!(
-            "{},{},{:.3},{:.3},{:.3},{:.3},{:.3},{:.3},{:.1},{:.1}",
+            "{},{},{},{},{:.3},{:.3},{:.3},{:.3},{:.3},{:.3},{:.3},{:.3},{:.1},{:.1}",
             row.validators,
             row.topology,
+            format_optional(row.p50_avg_degree),
+            format_optional(row.p50_diameter_hops),
+            row.p50_broadcast_ms,
+            row.p50_signature_aggregation_ms,
             row.p50_round_ms,
             row.p90_round_ms,
             row.p99_round_ms,
@@ -326,6 +448,10 @@ fn print_csv(summaries: &[Summary]) {
     }
 }
 
+fn format_optional(value: Option<f64>) -> String {
+    value.map_or_else(String::new, |value| format!("{value:.3}"))
+}
+
 fn print_table(summaries: &[Summary], opts: &Options) {
     println!(
         "Monte Carlo standalone SSF/3SF aggregation timing: trials={} seed={}",
@@ -335,27 +461,64 @@ fn print_table(summaries: &[Summary], opts: &Options) {
         "Sampled ranges: quorum=[0.667,0.90], bandwidth=[50,500] Mbps, evidence_bytes_per_validator=[1,16], raw_vote_bytes=[96,160], hop_ms=[150,900], duplicate_factor=[1.0,2.5], cores=[4,16]"
     );
     println!(
-        "{:<11} {:<24} {:>10} {:>10} {:>10} {:>10} {:>10} {:>10}",
+        "{:<11} {:<24} {:>7} {:>7} {:>10} {:>10} {:>10} {:>9} {:>9}",
         "validators",
         "topology",
-        "p50_round",
-        "p90_round",
-        "p99_round",
+        "degree",
+        "diam",
+        "broadcast",
+        "sig_agg",
+        "round",
         "SSF_fit%",
-        "3SF_fit%",
-        "3SF_p50"
+        "3SF_fit%"
     );
     for row in summaries {
         println!(
-            "{:<11} {:<24} {:>10.0} {:>10.0} {:>10.0} {:>10.1} {:>10.1} {:>10.0}",
+            "{:<11} {:<24} {:>7} {:>7} {:>10.0} {:>10.0} {:>10.0} {:>9.1} {:>9.1}",
             row.validators,
             row.topology,
+            format_optional(row.p50_avg_degree),
+            format_optional(row.p50_diameter_hops),
+            row.p50_broadcast_ms,
+            row.p50_signature_aggregation_ms,
             row.p50_round_ms,
-            row.p90_round_ms,
-            row.p99_round_ms,
             row.ssf_fit_pct,
-            row.three_sf_fit_pct,
-            row.p50_round_ms * 3.0
+            row.three_sf_fit_pct
         );
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn random_mesh_diameter_grows_slowly() {
+        assert!(random_mesh_diameter(1_000_000, 8.0) < 10.0);
+        assert_eq!(random_mesh_diameter(10, 9.0), 1.0);
+    }
+
+    #[test]
+    fn every_round_respects_its_components_and_evidence_floor() {
+        let params = SampledParams {
+            quorum: 2.0 / 3.0,
+            bandwidth_mbps: 100.0,
+            evidence_bytes_per_validator: 8.0,
+            raw_vote_bytes: 128.0,
+            hop_ms: 300.0,
+            duplicate_factor: 1.5,
+            crypto_multiplier: 1.0,
+            cores: 8.0,
+        };
+        let evidence_floor = evidence_floor_ms(1_000_000, &params);
+
+        for result in evaluate_trial(1_000_000, &params) {
+            assert!(result.round_ms >= evidence_floor);
+            assert!(result.round_ms >= result.broadcast_ms);
+            assert!(
+                result.round_ms >= result.signature_aggregation_ms
+                    || result.topology == "central-collector"
+            );
+        }
     }
 }

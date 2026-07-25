@@ -1,6 +1,6 @@
 # SSF and 3SF Aggregation Sensitivity Report
 
-Date: July 15, 2026
+Date: July 25, 2026
 
 ## Executive Summary
 
@@ -44,11 +44,14 @@ trials = 2000
 seed   = 42
 ```
 
-The exact CSV is saved at:
+The requested \(10\)-to-\(10^6\) validator scaling CSV is saved at:
 
 ```text
-reports/finality-monte-carlo-results.csv
+reports/finality-scaling-results.csv
 ```
+
+The earlier Ethereum-scale sweep remains available at
+`reports/finality-monte-carlo-results.csv`.
 
 ## 2. Why This Experiment Exists
 
@@ -120,6 +123,10 @@ round_ms = max(evidence_floor, propagation_cost, topology_specific_crypto_or_col
 
 This enforces the key idea from [20260709meeting.pdf](/home/abhimanyu/Downloads/20260709meeting.pdf): the information-theoretic lower bound determines the minimum possible aggregation time, while topology and CTMC-style effects add delay above that floor.
 
+The maximum represents overlapped dissemination and distributed processing.
+The central-collector stress case is sequential and uses
+`max(evidence_floor, broadcast + collection_and_crypto)` instead.
+
 ## 5. Randomized Parameter Ranges
 
 Each Monte Carlo trial samples valid values from bounded ranges:
@@ -139,20 +146,71 @@ These are not claimed as exact Ethereum measurements. They are plausible sensiti
 
 ## 6. Topologies Tested
 
-| Topology | Interpretation |
-|---|---|
-| `evidence-lower-bound` | Compressed evidence transfer floor |
-| `gossipsub-conservative` | Flat GossipSub with low effective parallelism |
-| `gossipsub-optimized` | Flat GossipSub with higher effective parallelism |
-| `committee-hierarchical` | Local committee aggregation followed by higher-level aggregation |
-| `central-collector` | One participant collects quorum votes directly |
-| `sequential-chain` | Sequential forwarding baseline |
+| Topology | Interpretation | Average degree | Diameter |
+|---|---|---:|---:|
+| `evidence-lower-bound` | Compressed evidence transfer floor; no overlay | n/a | n/a |
+| `gossipsub-conservative` | Sparse random GossipSub-style mesh; effective fanout 3–5 | sampled 6–10 | \(\lceil\log_{d-1}N\rceil\) |
+| `gossipsub-optimized` | Denser random GossipSub-style mesh; effective fanout 6–12 | sampled 12–20 | \(\lceil\log_{d-1}N\rceil\) |
+| `committee-hierarchical` | Committee stars followed by a 16–64 fanout aggregate tree | approaches 2 | \(2 + 2\lceil\log_f C\rceil\) |
+| `central-collector` | One collector star | approaches 2 | 2 |
+| `sequential-chain` | Sequential forwarding baseline | approaches 2 | \(N-1\) |
 
 This topology set directly reflects [20260709meeting.pdf](/home/abhimanyu/Downloads/20260709meeting.pdf), which highlights GossipSub mesh degree `D`, effective parallel communication `i_c`, topology, aggregation parallelism, and congestion as core variables.
 
+The GossipSub diameter is an analytical random-mesh estimate, not a peer-crawl
+measurement. Broadcast depth uses the lower effective fanout because not every
+mesh edge is assumed to deliver a useful new copy concurrently:
+
+```text
+mesh_diameter  = ceil(log_(degree - 1)(N))
+broadcast_hops = ceil(log_effective_fanout(quorum * N))
+```
+
+The abstraction does not implement GossipSub peer scoring, graft/prune events,
+heartbeats, churn, topic-subnet membership, or adversarial peers.
+
 ## 7. Results
 
-### 7.1 Full CSV Summary
+### 7.1 Scaling graphs
+
+![Broadcast, signature aggregation, and round-time scaling](figures/scaling-components.svg)
+
+The graph separates a round into broadcast and signature aggregation. It shows
+that flat GossipSub broadcast is approximately \(O(\log N)\), while the
+signature component is \(O(N/i_c)\) under fixed effective parallelism and
+therefore becomes the large-\(N\) bottleneck. Committee-hierarchical
+aggregation keeps local work bounded by committee size and grows mainly through
+additional hierarchy levels.
+
+![SSF and 3SF slot-time scaling](figures/protocol-slot-scaling.svg)
+
+Both protocols inherit the topology's scaling class. 3SF changes the constant
+from two rounds per slot to one; it does not turn an \(O(N)\) flat aggregation
+path into a scalable one.
+
+![Topology degree and diameter](figures/topology-properties.svg)
+
+At one million validators, the median logical graph properties are degree
+8.02/diameter 8 for conservative GossipSub, degree 15.94/diameter 6 for
+optimized GossipSub, and degree 2.00/diameter 6 for the committee hierarchy.
+
+### 7.2 Consistency with theoretical scaling
+
+| Topology | Broadcast | Signature collection/aggregation | Resulting slot trend |
+|---|---|---|---|
+| Flat GossipSub | \(O(\log N)\) | \(O(N/i_c)\) | \(O(N)\) after crypto dominates |
+| Committee hierarchy | \(O(\log_f(N/k))\) | \(O(k/C_{\mathrm{cpu}})\) locally | approximately \(O(\log N)\) |
+| Central collector | \(O(1)\) distance | \(O(N/B + N/C_{\mathrm{cpu}})\) | \(O(N)\) |
+| Sequential chain | \(O(N)\) | \(O(N)\) | \(O(N)\) |
+| Evidence floor | \(O(N/B)\) | n/a | lower bound only |
+
+The seeded sweep confirms these trends. From 10 to one million validators,
+conservative GossipSub broadcast increases from 1.68 s to 8.57 s, but its
+signature component increases from 2.14 ms to 212.20 s. The hierarchy's
+broadcast component increases from 0.84 s to 1.84 s, while its local signature
+component is bounded near 0.13 s once the committee-size cap is reached.
+
+### 7.3 Earlier Ethereum-scale CSV summary
 
 | Validators | Topology | p50 round | p90 round | p99 round | SSF p50 slot | 3SF p50 slot | 3SF p50 finality | SSF fit | 3SF fit |
 |---:|---|---:|---:|---:|---:|---:|---:|---:|---:|
@@ -310,6 +368,8 @@ Limitations:
 
 - The sampled parameter ranges are plausible, not measured from live Ethereum nodes.
 - GossipSub behavior is simplified.
+- Average degree and diameter are logical analytical estimates, not live
+  Ethereum measurements.
 - The CTMC model is approximated through randomized topology parameters rather than fully simulated as a stochastic process.
 - Adversarial behavior is not modeled.
 - Queueing is approximated through a duplicate/congestion factor.
@@ -322,10 +382,10 @@ Before using this as a central experimental result in the paper:
 
 1. Calibrate bandwidth and latency ranges from Ethereum networking measurements.
 2. Estimate realistic GossipSub duplicate factors.
-3. Add plots for p50/p90/p99 by validator count.
-4. Run multiple seeds and report confidence intervals.
-5. Validate `committee-hierarchical` against a more detailed event/network simulator.
-6. Separate compressed bitfield/evidence transmission from raw vote propagation in more detail.
+3. Run multiple seeds and report confidence intervals.
+4. Validate `committee-hierarchical` against a more detailed event/network simulator.
+5. Compare the analytical diameter and broadcast depth against live GossipSub
+   traces.
 
 ## 14. Final Conclusion
 
