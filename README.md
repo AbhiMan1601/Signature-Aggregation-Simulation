@@ -1,25 +1,6 @@
 # Ethereum Fast-Finality Aggregation Experiments
 
-This repository contains a reproducible Monte Carlo sensitivity study of
-single-slot finality (SSF) and three-slot finality (3SF). The study now makes
-the topology assumptions explicit and separates:
-
-- broadcast time;
-- signature collection and aggregation time;
-- one-round time;
-- SSF slot time (two rounds); and
-- 3SF slot time (one round).
-
-The default sweep uses \(N = 10, 100, 10^3, 10^4, 10^5, 10^6\) validators,
-2,000 trials, and seed 42. The main result is:
-
-> GossipSub broadcast depth grows approximately logarithmically with the
-> validator count, but flat all-validator signature work grows linearly once
-> effective parallelism is fixed. Consequently, flat GossipSub misses the
-> 12-second slot budget at large \(N\). A committee hierarchy keeps
-> per-aggregator work bounded and grows mainly with its small number of levels.
-> 3SF halves the per-slot constant relative to SSF, but does not change these
-> asymptotic trends.
+We ran a Dockerized Monte Carlo sensitivity experiment for Ethereum fast-finality aggregation. The experiment compares single-slot finality (SSF) and three-slot finality (3SF) under different network and aggregation topologies. We also added a deterministic Ethereum node-level latency and bandwidth experiment that applies mainnet slot timing, beacon-chain GossipSub parameters, and citable node bandwidth profiles to signature aggregation. This code has been modified after being forked from the research paper codebase hosted at https://anonymous.4open.science/r/Wonderboom-ethereum and has been used to produce these results.
 
 These are analytical Monte Carlo estimates, not measurements from a live
 GossipSub deployment.
