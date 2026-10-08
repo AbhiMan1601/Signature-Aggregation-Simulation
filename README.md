@@ -1,3 +1,13 @@
+> **Scientific audit:** The experiments and conclusions below are legacy analytical
+> sensitivity results. They do not implement the manuscript CTMC or validate Ethereum
+> SSF/3SF timing. Their evidence-transfer floor, hierarchy accounting, protocol
+> multipliers, and inherited TCP timing have unresolved limitations.
+> Use [the verified companion and claim audit](reports/paper-audit.md),
+> [reproducible runner](scripts/paper_experiments.py), and
+> [new figures](reports/figures/paper-experiments.pdf) for the current study.
+> Legacy files are preserved for provenance; their universal feasibility and
+> lower-bound claims are superseded by the audit.
+
 # Ethereum Fast-Finality Aggregation Experiments
 
 We ran a Dockerized Monte Carlo sensitivity experiment for Ethereum fast-finality aggregation. The experiment compares single-slot finality (SSF) and three-slot finality (3SF) under different network and aggregation topologies. We also added a deterministic Ethereum node-level latency and bandwidth experiment that applies mainnet slot timing, beacon-chain GossipSub parameters, and citable node bandwidth profiles to signature aggregation. This code has been modified after being forked from the research paper codebase hosted at https://anonymous.4open.science/r/Wonderboom-ethereum and has been used to produce these results.
